@@ -232,15 +232,22 @@
 
   <div class="count-row" id="countRow" style="display:none;">
     <div>Результаты</div>
-    <div class="n" id="countN"></div>
+    <div style="display:flex; align-items:baseline; gap:14px;">
+      <button id="exportBtn" style="padding:6px 14px; font-size:11px;">Скачать в Excel</button>
+      <div class="n" id="countN"></div>
+    </div>
   </div>
 
   <div id="results"></div>
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+let lastPlaces = [];
+
 const searchBtn = document.getElementById('searchBtn');
+const exportBtn = document.getElementById('exportBtn');
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
 const countRow = document.getElementById('countRow');
@@ -371,6 +378,7 @@ async function search(){
 
     countN.textContent = `${places.length} мест`;
     countRow.style.display = 'flex';
+    lastPlaces = places;
 
     places.forEach(p => resultsEl.appendChild(card(p)));
     setStatus('Готово.');
@@ -381,6 +389,39 @@ async function search(){
   }
 }
 
+function exportToExcel(){
+  if (!lastPlaces.length) return;
+
+  const rows = lastPlaces.map(p => {
+    const wd = p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions;
+    return {
+      'Название': p.displayName ? p.displayName.text : '',
+      'Адрес': p.formattedAddress || '',
+      'Рейтинг': p.rating || '',
+      'Кол-во отзывов': p.userRatingCount || '',
+      'Цена': priceLabel(p.priceLevel) || '',
+      'Открыто сейчас': p.regularOpeningHours ? (p.regularOpeningHours.openNow ? 'да' : 'нет') : '',
+      'Часы работы': wd ? wd.join('; ') : '',
+      'Телефон': p.nationalPhoneNumber || '',
+      'Сайт': p.websiteUri || '',
+      'Google Maps': p.googleMapsUri || '',
+      'Описание': p.editorialSummary ? p.editorialSummary.text : ''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:30},{wch:40}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Кофейни');
+
+  const query = document.getElementById('query').value.trim() || 'кофейни';
+  const fileName = `coffee_scout_${query.replace(/\s+/g,'_')}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+exportBtn.addEventListener('click', exportToExcel);
 searchBtn.addEventListener('click', search);
 document.getElementById('query').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
 document.getElementById('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
