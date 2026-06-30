@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Lead Scout — поиск заказчиков на дизайнерские столы</title>
+<title>Lead Scout — пошук замовників на дизайнерські столи</title>
 <style>
   :root{
     --bg: #1b1410;
@@ -24,7 +24,51 @@
     font-family: 'Georgia', 'Iowan Old Style', serif;
     padding:32px 18px 60px;
   }
-  .wrap{max-width:880px;margin:0 auto;}
+  .page{
+    max-width:1180px;
+    margin:0 auto;
+    display:flex;
+    gap:28px;
+    align-items:flex-start;
+  }
+  .guide{
+    width:260px;
+    flex-shrink:0;
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--good);
+    border-radius:4px;
+    padding:18px;
+    position:sticky;
+    top:24px;
+  }
+  .guide h3{
+    margin:0 0 12px;
+    font-size:15px;
+    color:var(--paper);
+    font-weight:700;
+  }
+  .guide ol{
+    margin:0;
+    padding-left:18px;
+  }
+  .guide li{
+    font-size:12.5px;
+    line-height:1.6;
+    color:#cdbfa9;
+    margin-bottom:10px;
+  }
+  .guide li b{color:var(--rust-light); font-weight:normal;}
+  .guide .tip{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    font-size:11.5px;
+    line-height:1.6;
+    color:#9a8a76;
+  }
+  .guide .tip b{color:var(--good); font-weight:normal;}
+  .wrap{max-width:880px; flex:1; min-width:0;}
   header{
     display:flex;
     align-items:baseline;
@@ -213,14 +257,35 @@
   .lead-row label{
     margin:0;
   }
+  @media (max-width: 900px){
+    .page{flex-direction:column;}
+    .guide{width:100%; position:static;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="page">
+
+  <aside class="guide">
+    <h3>📋 Короткий гайд</h3>
+    <ol>
+      <li><b>1.</b> Встав свій ключ Google Places API (New) — він використовується лише в браузері й нікуди не зберігається.</li>
+      <li><b>2.</b> Вкажи місто чи регіон пошуку та тип закладу (кав'ярні, ресторани, готелі тощо — потенційні замовники меблів).</li>
+      <li><b>3.</b> Обери кількість місць і сортування — "мало відгуків" підсвічує нові заклади, яким, ймовірно, найближчим часом знадобляться меблі.</li>
+      <li><b>4.</b> Натисни "Шукати замовників" і зачекай — пошук Instagram-акаунтів іде в черзі, тому для 40-60 місць це може зайняти хвилину-другу.</li>
+      <li><b>5.</b> У кожній картці познач статус ліда та залиш нотатку (хто приймає рішення, що запропонувати).</li>
+      <li><b>6.</b> Коли всі картки перестануть показувати "⏳ шукаю instagram...", тисни "Завантажити в Excel" — отримаєш повну CRM-таблицю.</li>
+    </ol>
+    <div class="tip">
+      <b>Порада:</b> заклади з малою кількістю відгуків і високим ціновим рівнем — найгарячіші ліди: вони, ймовірно, нові й готові вкладатись у дизайн.
+    </div>
+  </aside>
+
+  <div class="wrap">
 
   <header>
     <h1>🪵 Lead Scout</h1>
-    <span class="tag">поиск заказчиков на дизайнерские столы · Google Places API</span>
+    <span class="tag">пошук замовників на дизайнерські столи · Google Places API</span>
   </header>
 
   <div class="panel">
@@ -230,25 +295,25 @@
         <input id="apiKey" type="password" placeholder="AIza...">
       </div>
       <div class="field" style="flex:2;">
-        <label>Город / запрос</label>
-        <input id="query" type="text" placeholder="Прага, Брно, Карловы Вары...">
+        <label>Місто / запит</label>
+        <input id="query" type="text" placeholder="Київ, Львів, Прага...">
       </div>
     </div>
     <div class="row">
       <div class="field">
-        <label>Тип заведения</label>
+        <label>Тип закладу</label>
         <select id="venueType">
-          <option value="specialty coffee shop">кофейни</option>
-          <option value="restaurant">рестораны</option>
-          <option value="bar">бары</option>
-          <option value="coworking space">коворкинги</option>
-          <option value="boutique hotel">бутик-отели</option>
-          <option value="furniture showroom">шоурумы мебели</option>
-          <option value="interior design studio">дизайн-студии интерьера</option>
+          <option value="specialty coffee shop">кав'ярні</option>
+          <option value="restaurant">ресторани</option>
+          <option value="bar">бари</option>
+          <option value="coworking space">коворкінги</option>
+          <option value="boutique hotel">бутик-готелі</option>
+          <option value="furniture showroom">шоуруми меблів</option>
+          <option value="interior design studio">дизайн-студії інтер'єру</option>
         </select>
       </div>
       <div class="field" style="max-width:160px;">
-        <label>Сколько мест</label>
+        <label>Скільки місць</label>
         <select id="limit">
           <option value="6">6</option>
           <option value="10" selected>10</option>
@@ -258,34 +323,36 @@
         </select>
       </div>
       <div class="field" style="max-width:220px;">
-        <label>Сортировка</label>
+        <label>Сортування</label>
         <select id="sortBy">
-          <option value="default">по умолчанию</option>
-          <option value="few_reviews">мало отзывов (новые)</option>
-          <option value="high_price">выше ценник</option>
+          <option value="default">за замовчуванням</option>
+          <option value="few_reviews">мало відгуків (нові)</option>
+          <option value="high_price">вищий цінник</option>
         </select>
       </div>
     </div>
     <div class="hint">
-      Нужен свой ключ Google Places API (New) с включённым Places API и оплаченным/триальным биллингом.
-      Ключ используется только в этой вкладке браузера, никуда не сохраняется и не передаётся на сервер.
-      <a href="https://developers.google.com/maps/documentation/places/web-service/op-overview" target="_blank">Как получить ключ →</a>
+      Потрібен власний ключ Google Places API (New) із увімкненим Places API та оплаченим/тріальним білінгом.
+      Ключ використовується лише у цій вкладці браузера, нікуди не зберігається і не передається на сервер.
+      <a href="https://developers.google.com/maps/documentation/places/web-service/op-overview" target="_blank">Як отримати ключ →</a>
     </div>
     <div class="row" style="margin-top:12px;">
-      <button id="searchBtn">Искать заказчиков</button>
+      <button id="searchBtn">Шукати замовників</button>
     </div>
     <div class="status" id="status"></div>
   </div>
 
   <div class="count-row" id="countRow" style="display:none;">
-    <div>Результаты</div>
+    <div>Результати</div>
     <div style="display:flex; align-items:baseline; gap:14px;">
-      <button id="exportBtn" style="padding:6px 14px; font-size:11px;">Скачать в Excel</button>
+      <button id="exportBtn" style="padding:6px 14px; font-size:11px;">Завантажити в Excel</button>
       <div class="n" id="countN"></div>
     </div>
   </div>
 
   <div id="results"></div>
+
+  </div>
 
 </div>
 
@@ -319,7 +386,6 @@ function priceLabel(level){
 function formatHours(place){
   const wd = place.regularOpeningHours && place.regularOpeningHours.weekdayDescriptions;
   if (!wd) return null;
-  // shorten: just show today's-ish summary by listing first 2 lines + ellipsis hint in tooltip
   return wd;
 }
 
@@ -332,37 +398,50 @@ function extractIgHandle(url){
   return handle;
 }
 
+let igQueue = Promise.resolve();
+function fetchOnce(url){
+  return fetch(url).then(r => {
+    if (r.status === 429) return Promise.reject(new Error('429'));
+    return r.ok ? r.text() : Promise.reject(new Error('bad status'));
+  });
+}
+function queuedFetch(url){
+  const run = () => fetchOnce(url).catch(err => {
+    if (err.message === '429'){
+      return new Promise(r => setTimeout(r, 3000)).then(() => fetchOnce(url).catch(() => null));
+    }
+    return null;
+  });
+  const result = igQueue.then(run);
+  igQueue = result.then(() => new Promise(r => setTimeout(r, 700)), () => new Promise(r => setTimeout(r, 700)));
+  return result;
+}
+
 async function findInstagram(websiteUrl){
   if (!websiteUrl) return null;
 
-  // Сайт сам уже является ссылкой на Instagram
+  // Сайт сам уже є посиланням на Instagram
   const direct = extractIgHandle(websiteUrl);
   if (direct) return direct;
 
-  // Если сайт ведёт на Facebook — Instagram там вряд ли найдём
+  // Якщо сайт веде на Facebook — Instagram там навряд чи знайдемо
   if (/facebook\.com/i.test(websiteUrl)) return null;
 
-  try{
-    const readerUrl = 'https://r.jina.ai/' + websiteUrl;
-    const resp = await fetch(readerUrl);
-    if (!resp.ok) return null;
-    const text = await resp.text();
-    return extractIgHandle(text);
-  }catch(e){
-    return null;
-  }
+  const text = await queuedFetch('https://r.jina.ai/' + websiteUrl);
+  if (!text) return null;
+  return extractIgHandle(text);
 }
 
 function card(place){
-  const name = place.displayName ? place.displayName.text : '(без названия)';
+  const name = place.displayName ? place.displayName.text : '(без назви)';
   const address = place.formattedAddress || '—';
   const rating = place.rating ? `⭐ ${place.rating}` : '';
-  const ratingCount = place.userRatingCount ? ` (${place.userRatingCount} отзывов)` : '';
+  const ratingCount = place.userRatingCount ? ` (${place.userRatingCount} відгуків)` : '';
   const price = priceLabel(place.priceLevel);
   const website = place.websiteUri || null;
   const mapsUri = place.googleMapsUri || null;
   const phone = place.nationalPhoneNumber || null;
-  const openNow = place.regularOpeningHours ? (place.regularOpeningHours.openNow ? 'открыто сейчас' : 'закрыто сейчас') : null;
+  const openNow = place.regularOpeningHours ? (place.regularOpeningHours.openNow ? 'відкрито зараз' : 'закрито зараз') : null;
   const hours = formatHours(place);
   const editorial = place.editorialSummary ? place.editorialSummary.text : null;
 
@@ -374,12 +453,12 @@ function card(place){
       <h2>${escapeHtml(name)}</h2>
       ${rating ? `<span class="badge">${rating}${ratingCount}</span>` : ''}
     </div>
-    <div class="meta"><b>Адрес</b>${escapeHtml(address)}</div>
+    <div class="meta"><b>Адреса</b>${escapeHtml(address)}</div>
   `;
-  if (price) html += `<div class="meta"><b>Цена</b>${price}</div>`;
+  if (price) html += `<div class="meta"><b>Ціна</b>${price}</div>`;
   if (openNow) html += `<div class="meta"><b>Статус</b>${openNow}</div>`;
-  if (hours) html += `<div class="meta"><b>Часы</b>${hours.map(escapeHtml).join(' · ')}</div>`;
-  if (editorial) html += `<div class="meta"><b>Описание</b>${escapeHtml(editorial)}</div>`;
+  if (hours) html += `<div class="meta"><b>Години</b>${hours.map(escapeHtml).join(' · ')}</div>`;
+  if (editorial) html += `<div class="meta"><b>Опис</b>${escapeHtml(editorial)}</div>`;
 
   html += `<div class="links">`;
   if (website) html += `<a href="${website}" target="_blank">сайт →</a>`;
@@ -387,19 +466,19 @@ function card(place){
   if (phone) html += `<a href="tel:${phone}">${phone}</a>`;
   if (phone) html += `<a href="https://wa.me/${phone.replace(/[^\d+]/g,'').replace(/^\+/,'')}" target="_blank">whatsapp →</a>`;
   const igId = 'ig-' + Math.random().toString(36).slice(2, 9);
-  html += `<span id="${igId}">⏳ ищу instagram...</span>`;
+  html += `<span id="${igId}">⏳ шукаю instagram...</span>`;
   html += `</div>`;
 
   html += `<div class="lead-row">
     <label style="margin-right:-4px;">Статус</label>
     <select class="lead-status">
-      <option value="new">новый лид</option>
-      <option value="contacted">написал</option>
-      <option value="meeting">встреча/звонок</option>
-      <option value="client">клиент</option>
-      <option value="declined">отказ</option>
+      <option value="new">новий лід</option>
+      <option value="contacted">написав</option>
+      <option value="meeting">зустріч/дзвінок</option>
+      <option value="client">клієнт</option>
+      <option value="declined">відмова</option>
     </select>
-    <input type="text" class="lead-notes" placeholder="заметка (кто решает, что предложить...)">
+    <input type="text" class="lead-notes" placeholder="нотатка (хто приймає рішення, що запропонувати...)">
   </div>`;
 
   div.innerHTML = html;
@@ -420,7 +499,7 @@ function card(place){
     if (handle){
       el.outerHTML = `<a href="https://instagram.com/${handle}" target="_blank">@${handle} (instagram) →</a>`;
     } else {
-      el.outerHTML = `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">не найден, искать по хэштегу →</a>`;
+      el.outerHTML = `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">не знайдено, шукати за хештегом →</a>`;
     }
   });
 
@@ -440,11 +519,11 @@ async function search(){
   const venueType = document.getElementById('venueType').value;
   const sortBy = document.getElementById('sortBy').value;
 
-  if (!apiKey){ setStatus('Введите API-ключ Google Places.', true); return; }
-  if (!query){ setStatus('Введите город или запрос.', true); return; }
+  if (!apiKey){ setStatus('Введіть API-ключ Google Places.', true); return; }
+  if (!query){ setStatus('Введіть місто або запит.', true); return; }
 
   searchBtn.disabled = true;
-  setStatus('Ищу кофейни...');
+  setStatus('Шукаю заклади...');
   resultsEl.innerHTML = '';
   countRow.style.display = 'none';
 
@@ -487,7 +566,7 @@ async function search(){
       const data = await resp.json();
 
       if (!resp.ok){
-        const msg = (data.error && data.error.message) || `Ошибка запроса (${resp.status})`;
+        const msg = (data.error && data.error.message) || `Помилка запиту (${resp.status})`;
         throw new Error(msg);
       }
 
@@ -495,9 +574,9 @@ async function search(){
       pageToken = data.nextPageToken || null;
       page++;
 
-      setStatus(`Ищу кофейни... найдено ${places.length}`);
+      setStatus(`Шукаю заклади... знайдено ${places.length}`);
 
-      // Google требует небольшую паузу перед использованием nextPageToken
+      // Google вимагає невелику паузу перед використанням nextPageToken
       if (pageToken && places.length < limit) {
         await new Promise(r => setTimeout(r, 2000));
       }
@@ -513,20 +592,20 @@ async function search(){
     }
 
     if (places.length === 0){
-      resultsEl.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте другой город или запрос.</div>';
+      resultsEl.innerHTML = '<div class="empty">Нічого не знайдено. Спробуйте інше місто або запит.</div>';
       setStatus('');
       searchBtn.disabled = false;
       return;
     }
 
-    countN.textContent = `${places.length} мест`;
+    countN.textContent = `${places.length} місць`;
     countRow.style.display = 'flex';
     lastPlaces = places;
 
     places.forEach(p => resultsEl.appendChild(card(p)));
     setStatus('Готово.');
   }catch(err){
-    setStatus('Ошибка: ' + err.message, true);
+    setStatus('Помилка: ' + err.message, true);
   }finally{
     searchBtn.disabled = false;
   }
@@ -535,25 +614,25 @@ async function search(){
 function exportToExcel(){
   if (!lastPlaces.length) return;
 
-  const statusLabel = { new:'новый лид', contacted:'написал', meeting:'встреча/звонок', client:'клиент', declined:'отказ' };
+  const statusLabel = { new:'новий лід', contacted:'написав', meeting:'зустріч/дзвінок', client:'клієнт', declined:'відмова' };
 
   const rows = lastPlaces.map(p => {
     const wd = p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions;
     return {
-      'Название': p.displayName ? p.displayName.text : '',
-      'Адрес': p.formattedAddress || '',
+      'Назва': p.displayName ? p.displayName.text : '',
+      'Адреса': p.formattedAddress || '',
       'Рейтинг': p.rating || '',
-      'Кол-во отзывов': p.userRatingCount || '',
-      'Цена': priceLabel(p.priceLevel) || '',
-      'Открыто сейчас': p.regularOpeningHours ? (p.regularOpeningHours.openNow ? 'да' : 'нет') : '',
-      'Часы работы': wd ? wd.join('; ') : '',
+      'К-сть відгуків': p.userRatingCount || '',
+      'Ціна': priceLabel(p.priceLevel) || '',
+      'Відкрито зараз': p.regularOpeningHours ? (p.regularOpeningHours.openNow ? 'так' : 'ні') : '',
+      'Години роботи': wd ? wd.join('; ') : '',
       'Телефон': p.nationalPhoneNumber || '',
       'Сайт': p.websiteUri || '',
       'Instagram': p.instagramHandle ? `https://instagram.com/${p.instagramHandle}` : '',
       'Google Maps': p.googleMapsUri || '',
-      'Описание': p.editorialSummary ? p.editorialSummary.text : '',
-      'Статус лида': statusLabel[p.leadStatus] || 'новый лид',
-      'Заметка': p.leadNotes || ''
+      'Опис': p.editorialSummary ? p.editorialSummary.text : '',
+      'Статус ліда': statusLabel[p.leadStatus] || 'новий лід',
+      'Нотатка': p.leadNotes || ''
     };
   });
 
@@ -562,7 +641,7 @@ function exportToExcel(){
     {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:26},{wch:30},{wch:40},{wch:16},{wch:36}
   ];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Лиды');
+  XLSX.utils.book_append_sheet(wb, ws, 'Ліди');
 
   const query = document.getElementById('query').value.trim() || 'leads';
   const fileName = `lead_scout_${query.replace(/\s+/g,'_')}.xlsx`;
