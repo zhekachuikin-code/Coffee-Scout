@@ -277,6 +277,23 @@ function formatHours(place){
   return wd;
 }
 
+async function findInstagram(websiteUrl){
+  if (!websiteUrl) return null;
+  try{
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(websiteUrl);
+    const resp = await fetch(proxyUrl);
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    const match = html.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i);
+    if (!match) return null;
+    const handle = match[1].replace(/\/$/, '');
+    if (['p','reel','explore','tv',''].includes(handle.toLowerCase())) return null;
+    return handle;
+  }catch(e){
+    return null;
+  }
+}
+
 function card(place){
   const name = place.displayName ? place.displayName.text : '(без названия)';
   const address = place.formattedAddress || '—';
@@ -309,10 +326,23 @@ function card(place){
   if (website) html += `<a href="${website}" target="_blank">сайт →</a>`;
   if (mapsUri) html += `<a href="${mapsUri}" target="_blank">google maps →</a>`;
   if (phone) html += `<a href="tel:${phone}">${phone}</a>`;
-  html += `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">искать в instagram →</a>`;
+  const igId = 'ig-' + Math.random().toString(36).slice(2, 9);
+  html += `<span id="${igId}">⏳ ищу instagram...</span>`;
   html += `</div>`;
 
   div.innerHTML = html;
+
+  findInstagram(website).then(handle => {
+    place.instagramHandle = handle || null;
+    const el = div.querySelector('#' + igId);
+    if (!el) return;
+    if (handle){
+      el.outerHTML = `<a href="https://instagram.com/${handle}" target="_blank">@${handle} (instagram) →</a>`;
+    } else {
+      el.outerHTML = `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">не найден, искать по хэштегу →</a>`;
+    }
+  });
+
   return div;
 }
 
@@ -427,6 +457,7 @@ function exportToExcel(){
       'Часы работы': wd ? wd.join('; ') : '',
       'Телефон': p.nationalPhoneNumber || '',
       'Сайт': p.websiteUri || '',
+      'Instagram': p.instagramHandle ? `https://instagram.com/${p.instagramHandle}` : '',
       'Google Maps': p.googleMapsUri || '',
       'Описание': p.editorialSummary ? p.editorialSummary.text : ''
     };
@@ -434,7 +465,7 @@ function exportToExcel(){
 
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [
-    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:30},{wch:40}
+    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:26},{wch:30},{wch:40}
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Кофейни');
