@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Coffee Scout — поиск кофеен</title>
+<style>
+  :root{
+    --bg: #1b1410;
+    --bg-card: #241b15;
+    --paper: #f4ead8;
+    --rust: #b5572b;
+    --rust-light: #d98a52;
+    --cream: #e9dcc4;
+    --line: #3a2c20;
+    --good: #8fae6a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, #2a1e16 0%, transparent 45%),
+      var(--bg);
+    color:var(--cream);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    padding:32px 18px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    border-bottom:2px solid var(--rust);
+    padding-bottom:14px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  header h1{
+    font-size:32px;
+    letter-spacing:0.5px;
+    margin:0;
+    color:var(--paper);
+    font-weight:700;
+  }
+  header .tag{
+    font-family: 'Courier New', monospace;
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--rust-light);
+  }
+  .panel{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:18px;
+    margin-bottom:24px;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  .field{flex:1;min-width:160px;}
+  label{
+    display:block;
+    font-family:'Courier New', monospace;
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--rust-light);
+    margin-bottom:5px;
+  }
+  input, select{
+    width:100%;
+    background:#15100c;
+    border:1px solid var(--line);
+    color:var(--paper);
+    padding:9px 10px;
+    border-radius:3px;
+    font-family:'Courier New', monospace;
+    font-size:13px;
+  }
+  input:focus, select:focus{outline:1px solid var(--rust); border-color:var(--rust);}
+  .hint{
+    font-size:11px;
+    color:#9a8a76;
+    margin-top:4px;
+    line-height:1.5;
+  }
+  .hint a{color:var(--rust-light);}
+  button{
+    background:var(--rust);
+    color:var(--paper);
+    border:none;
+    padding:11px 22px;
+    font-family:'Courier New', monospace;
+    font-size:13px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    border-radius:3px;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  button:hover{background:var(--rust-light);}
+  button:disabled{background:#5a4a3a; cursor:not-allowed;}
+
+  .status{
+    font-family:'Courier New', monospace;
+    font-size:12px;
+    color:var(--rust-light);
+    margin:10px 0 0;
+    min-height:16px;
+  }
+  .status.err{color:#d9705a;}
+
+  .count-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:16px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:8px;
+  }
+  .count-row .n{
+    font-family:'Courier New', monospace;
+    font-size:12px;
+    color:#9a8a76;
+    letter-spacing:1px;
+  }
+
+  .card{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--rust);
+    border-radius:3px;
+    padding:18px 20px;
+    margin-bottom:14px;
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .card h2{
+    margin:0;
+    font-size:20px;
+    color:var(--paper);
+    font-weight:700;
+  }
+  .badge{
+    font-family:'Courier New', monospace;
+    font-size:12px;
+    color:var(--bg);
+    background:var(--good);
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .meta{
+    font-size:13px;
+    color:#cdbfa9;
+    margin:3px 0;
+    line-height:1.55;
+  }
+  .meta b{color:var(--rust-light); font-weight:normal; font-family:'Courier New', monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-right:6px;}
+  .links{
+    margin-top:10px;
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .links a{
+    color:var(--rust-light);
+    text-decoration:none;
+    font-family:'Courier New', monospace;
+    font-size:12px;
+    border-bottom:1px dotted var(--rust-light);
+  }
+  .links a:hover{color:var(--paper);}
+
+  .empty{
+    text-align:center;
+    color:#7a6b58;
+    font-family:'Courier New', monospace;
+    font-size:13px;
+    padding:40px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>☕ Coffee Scout</h1>
+    <span class="tag">поиск кофеен · Google Places API</span>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field" style="flex:2;">
+        <label>API-ключ Google Places</label>
+        <input id="apiKey" type="password" placeholder="AIza...">
+      </div>
+      <div class="field" style="flex:2;">
+        <label>Город / запрос</label>
+        <input id="query" type="text" placeholder="Прага, Брно, Карловы Вары...">
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>Сколько мест</label>
+        <select id="limit">
+          <option value="6">6</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+    <div class="hint">
+      Нужен свой ключ Google Places API (New) с включённым Places API и оплаченным/триальным биллингом.
+      Ключ используется только в этой вкладке браузера, никуда не сохраняется и не передаётся на сервер.
+      <a href="https://developers.google.com/maps/documentation/places/web-service/op-overview" target="_blank">Как получить ключ →</a>
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <button id="searchBtn">Искать кофейни</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="count-row" id="countRow" style="display:none;">
+    <div>Результаты</div>
+    <div class="n" id="countN"></div>
+  </div>
+
+  <div id="results"></div>
+
+</div>
+
+<script>
+const searchBtn = document.getElementById('searchBtn');
+const statusEl = document.getElementById('status');
+const resultsEl = document.getElementById('results');
+const countRow = document.getElementById('countRow');
+const countN = document.getElementById('countN');
+
+function setStatus(msg, isErr){
+  statusEl.textContent = msg || '';
+  statusEl.className = 'status' + (isErr ? ' err' : '');
+}
+
+function priceLabel(level){
+  const map = {
+    'PRICE_LEVEL_FREE': '—',
+    'PRICE_LEVEL_INEXPENSIVE': '$',
+    'PRICE_LEVEL_MODERATE': '$$',
+    'PRICE_LEVEL_EXPENSIVE': '$$$',
+    'PRICE_LEVEL_VERY_EXPENSIVE': '$$$$'
+  };
+  return map[level] || null;
+}
+
+function formatHours(place){
+  const wd = place.regularOpeningHours && place.regularOpeningHours.weekdayDescriptions;
+  if (!wd) return null;
+  // shorten: just show today's-ish summary by listing first 2 lines + ellipsis hint in tooltip
+  return wd;
+}
+
+function card(place){
+  const name = place.displayName ? place.displayName.text : '(без названия)';
+  const address = place.formattedAddress || '—';
+  const rating = place.rating ? `⭐ ${place.rating}` : '';
+  const ratingCount = place.userRatingCount ? ` (${place.userRatingCount} отзывов)` : '';
+  const price = priceLabel(place.priceLevel);
+  const website = place.websiteUri || null;
+  const mapsUri = place.googleMapsUri || null;
+  const phone = place.nationalPhoneNumber || null;
+  const openNow = place.regularOpeningHours ? (place.regularOpeningHours.openNow ? 'открыто сейчас' : 'закрыто сейчас') : null;
+  const hours = formatHours(place);
+  const editorial = place.editorialSummary ? place.editorialSummary.text : null;
+
+  const div = document.createElement('div');
+  div.className = 'card';
+
+  let html = `
+    <div class="card-top">
+      <h2>${escapeHtml(name)}</h2>
+      ${rating ? `<span class="badge">${rating}${ratingCount}</span>` : ''}
+    </div>
+    <div class="meta"><b>Адрес</b>${escapeHtml(address)}</div>
+  `;
+  if (price) html += `<div class="meta"><b>Цена</b>${price}</div>`;
+  if (openNow) html += `<div class="meta"><b>Статус</b>${openNow}</div>`;
+  if (hours) html += `<div class="meta"><b>Часы</b>${hours.map(escapeHtml).join(' · ')}</div>`;
+  if (editorial) html += `<div class="meta"><b>Описание</b>${escapeHtml(editorial)}</div>`;
+
+  html += `<div class="links">`;
+  if (website) html += `<a href="${website}" target="_blank">сайт →</a>`;
+  if (mapsUri) html += `<a href="${mapsUri}" target="_blank">google maps →</a>`;
+  if (phone) html += `<a href="tel:${phone}">${phone}</a>`;
+  html += `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">искать в instagram →</a>`;
+  html += `</div>`;
+
+  div.innerHTML = html;
+  return div;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function search(){
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const query = document.getElementById('query').value.trim();
+  const limit = parseInt(document.getElementById('limit').value, 10);
+
+  if (!apiKey){ setStatus('Введите API-ключ Google Places.', true); return; }
+  if (!query){ setStatus('Введите город или запрос.', true); return; }
+
+  searchBtn.disabled = true;
+  setStatus('Ищу кофейни...');
+  resultsEl.innerHTML = '';
+  countRow.style.display = 'none';
+
+  try{
+    const fieldMask = [
+      'places.displayName',
+      'places.formattedAddress',
+      'places.rating',
+      'places.userRatingCount',
+      'places.priceLevel',
+      'places.websiteUri',
+      'places.googleMapsUri',
+      'places.nationalPhoneNumber',
+      'places.regularOpeningHours',
+      'places.editorialSummary'
+    ].join(',');
+
+    const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': fieldMask
+      },
+      body: JSON.stringify({
+        textQuery: `specialty coffee shop in ${query}`,
+        maxResultCount: limit
+      })
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok){
+      const msg = (data.error && data.error.message) || `Ошибка запроса (${resp.status})`;
+      throw new Error(msg);
+    }
+
+    const places = data.places || [];
+    if (places.length === 0){
+      resultsEl.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте другой город или запрос.</div>';
+      setStatus('');
+      searchBtn.disabled = false;
+      return;
+    }
+
+    countN.textContent = `${places.length} мест`;
+    countRow.style.display = 'flex';
+
+    places.forEach(p => resultsEl.appendChild(card(p)));
+    setStatus('Готово.');
+  }catch(err){
+    setStatus('Ошибка: ' + err.message, true);
+  }finally{
+    searchBtn.disabled = false;
+  }
+}
+
+searchBtn.addEventListener('click', search);
+document.getElementById('query').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+document.getElementById('apiKey').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+</script>
+</body>
+</html>
