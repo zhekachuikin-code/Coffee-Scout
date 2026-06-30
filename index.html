@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Coffee Scout — поиск кофеен</title>
+<title>Lead Scout — поиск заказчиков на дизайнерские столы</title>
 <style>
   :root{
     --bg: #1b1410;
@@ -189,14 +189,38 @@
     font-size:13px;
     padding:40px 0;
   }
+  .lead-row{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .lead-row select{
+    width:auto;
+    min-width:140px;
+    padding:6px 8px;
+    font-size:12px;
+  }
+  .lead-row input{
+    flex:1;
+    min-width:180px;
+    padding:6px 8px;
+    font-size:12px;
+  }
+  .lead-row label{
+    margin:0;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <h1>☕ Coffee Scout</h1>
-    <span class="tag">поиск кофеен · Google Places API</span>
+    <h1>🪵 Lead Scout</h1>
+    <span class="tag">поиск заказчиков на дизайнерские столы · Google Places API</span>
   </header>
 
   <div class="panel">
@@ -209,6 +233,20 @@
         <label>Город / запрос</label>
         <input id="query" type="text" placeholder="Прага, Брно, Карловы Вары...">
       </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Тип заведения</label>
+        <select id="venueType">
+          <option value="specialty coffee shop">кофейни</option>
+          <option value="restaurant">рестораны</option>
+          <option value="bar">бары</option>
+          <option value="coworking space">коворкинги</option>
+          <option value="boutique hotel">бутик-отели</option>
+          <option value="furniture showroom">шоурумы мебели</option>
+          <option value="interior design studio">дизайн-студии интерьера</option>
+        </select>
+      </div>
       <div class="field" style="max-width:160px;">
         <label>Сколько мест</label>
         <select id="limit">
@@ -219,6 +257,14 @@
           <option value="60">60</option>
         </select>
       </div>
+      <div class="field" style="max-width:220px;">
+        <label>Сортировка</label>
+        <select id="sortBy">
+          <option value="default">по умолчанию</option>
+          <option value="few_reviews">мало отзывов (новые)</option>
+          <option value="high_price">выше ценник</option>
+        </select>
+      </div>
     </div>
     <div class="hint">
       Нужен свой ключ Google Places API (New) с включённым Places API и оплаченным/триальным биллингом.
@@ -226,7 +272,7 @@
       <a href="https://developers.google.com/maps/documentation/places/web-service/op-overview" target="_blank">Как получить ключ →</a>
     </div>
     <div class="row" style="margin-top:12px;">
-      <button id="searchBtn">Искать кофейни</button>
+      <button id="searchBtn">Искать заказчиков</button>
     </div>
     <div class="status" id="status"></div>
   </div>
@@ -277,18 +323,31 @@ function formatHours(place){
   return wd;
 }
 
+function extractIgHandle(url){
+  if (!url) return null;
+  const m = url.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i);
+  if (!m) return null;
+  const handle = m[1].replace(/\/$/, '');
+  if (['p','reel','explore','tv','invites','stories',''].includes(handle.toLowerCase())) return null;
+  return handle;
+}
+
 async function findInstagram(websiteUrl){
   if (!websiteUrl) return null;
+
+  // Сайт сам уже является ссылкой на Instagram
+  const direct = extractIgHandle(websiteUrl);
+  if (direct) return direct;
+
+  // Если сайт ведёт на Facebook — Instagram там вряд ли найдём
+  if (/facebook\.com/i.test(websiteUrl)) return null;
+
   try{
-    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(websiteUrl);
-    const resp = await fetch(proxyUrl);
+    const readerUrl = 'https://r.jina.ai/' + websiteUrl;
+    const resp = await fetch(readerUrl);
     if (!resp.ok) return null;
-    const html = await resp.text();
-    const match = html.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i);
-    if (!match) return null;
-    const handle = match[1].replace(/\/$/, '');
-    if (['p','reel','explore','tv',''].includes(handle.toLowerCase())) return null;
-    return handle;
+    const text = await resp.text();
+    return extractIgHandle(text);
   }catch(e){
     return null;
   }
@@ -326,11 +385,33 @@ function card(place){
   if (website) html += `<a href="${website}" target="_blank">сайт →</a>`;
   if (mapsUri) html += `<a href="${mapsUri}" target="_blank">google maps →</a>`;
   if (phone) html += `<a href="tel:${phone}">${phone}</a>`;
+  if (phone) html += `<a href="https://wa.me/${phone.replace(/[^\d+]/g,'').replace(/^\+/,'')}" target="_blank">whatsapp →</a>`;
   const igId = 'ig-' + Math.random().toString(36).slice(2, 9);
   html += `<span id="${igId}">⏳ ищу instagram...</span>`;
   html += `</div>`;
 
+  html += `<div class="lead-row">
+    <label style="margin-right:-4px;">Статус</label>
+    <select class="lead-status">
+      <option value="new">новый лид</option>
+      <option value="contacted">написал</option>
+      <option value="meeting">встреча/звонок</option>
+      <option value="client">клиент</option>
+      <option value="declined">отказ</option>
+    </select>
+    <input type="text" class="lead-notes" placeholder="заметка (кто решает, что предложить...)">
+  </div>`;
+
   div.innerHTML = html;
+
+  div.querySelector('.lead-status').value = place.leadStatus || 'new';
+  div.querySelector('.lead-status').addEventListener('change', e => {
+    place.leadStatus = e.target.value;
+  });
+  div.querySelector('.lead-notes').value = place.leadNotes || '';
+  div.querySelector('.lead-notes').addEventListener('input', e => {
+    place.leadNotes = e.target.value;
+  });
 
   findInstagram(website).then(handle => {
     place.instagramHandle = handle || null;
@@ -356,6 +437,8 @@ async function search(){
   const apiKey = document.getElementById('apiKey').value.trim();
   const query = document.getElementById('query').value.trim();
   const limit = parseInt(document.getElementById('limit').value, 10);
+  const venueType = document.getElementById('venueType').value;
+  const sortBy = document.getElementById('sortBy').value;
 
   if (!apiKey){ setStatus('Введите API-ключ Google Places.', true); return; }
   if (!query){ setStatus('Введите город или запрос.', true); return; }
@@ -386,7 +469,7 @@ async function search(){
 
     do {
       const body = {
-        textQuery: `specialty coffee shop in ${query}`,
+        textQuery: `${venueType} in ${query}`,
         pageSize: Math.min(20, limit - places.length)
       };
       if (pageToken) body.pageToken = pageToken;
@@ -422,6 +505,13 @@ async function search(){
 
     places = places.slice(0, limit);
 
+    if (sortBy === 'few_reviews'){
+      places.sort((a, b) => (a.userRatingCount || 0) - (b.userRatingCount || 0));
+    } else if (sortBy === 'high_price'){
+      const priceRank = { 'PRICE_LEVEL_VERY_EXPENSIVE':4, 'PRICE_LEVEL_EXPENSIVE':3, 'PRICE_LEVEL_MODERATE':2, 'PRICE_LEVEL_INEXPENSIVE':1, 'PRICE_LEVEL_FREE':0 };
+      places.sort((a, b) => (priceRank[b.priceLevel] || -1) - (priceRank[a.priceLevel] || -1));
+    }
+
     if (places.length === 0){
       resultsEl.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте другой город или запрос.</div>';
       setStatus('');
@@ -445,6 +535,8 @@ async function search(){
 function exportToExcel(){
   if (!lastPlaces.length) return;
 
+  const statusLabel = { new:'новый лид', contacted:'написал', meeting:'встреча/звонок', client:'клиент', declined:'отказ' };
+
   const rows = lastPlaces.map(p => {
     const wd = p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions;
     return {
@@ -459,19 +551,21 @@ function exportToExcel(){
       'Сайт': p.websiteUri || '',
       'Instagram': p.instagramHandle ? `https://instagram.com/${p.instagramHandle}` : '',
       'Google Maps': p.googleMapsUri || '',
-      'Описание': p.editorialSummary ? p.editorialSummary.text : ''
+      'Описание': p.editorialSummary ? p.editorialSummary.text : '',
+      'Статус лида': statusLabel[p.leadStatus] || 'новый лид',
+      'Заметка': p.leadNotes || ''
     };
   });
 
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [
-    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:26},{wch:30},{wch:40}
+    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:26},{wch:30},{wch:40},{wch:16},{wch:36}
   ];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Кофейни');
+  XLSX.utils.book_append_sheet(wb, ws, 'Лиды');
 
-  const query = document.getElementById('query').value.trim() || 'кофейни';
-  const fileName = `coffee_scout_${query.replace(/\s+/g,'_')}.xlsx`;
+  const query = document.getElementById('query').value.trim() || 'leads';
+  const fileName = `lead_scout_${query.replace(/\s+/g,'_')}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
 
