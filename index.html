@@ -214,8 +214,10 @@
         <select id="limit">
           <option value="6">6</option>
           <option value="10" selected>10</option>
-          <option value="15">15</option>
           <option value="20">20</option>
+          <option value="40">40</option>
+          <option value="60">60</option>
+          <option value="100">100</option>
         </select>
       </div>
     </div>
@@ -345,30 +347,50 @@ async function search(){
       'places.googleMapsUri',
       'places.nationalPhoneNumber',
       'places.regularOpeningHours',
-      'places.editorialSummary'
+      'places.editorialSummary',
+      'nextPageToken'
     ].join(',');
 
-    const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': fieldMask
-      },
-      body: JSON.stringify({
-        textQuery: `specialty coffee shop in ${query}`,
-        maxResultCount: limit
-      })
-    });
+    let places = [];
+    let pageToken = null;
+    let page = 0;
 
-    const data = await resp.json();
+    do {
+      const body = pageToken
+        ? { pageToken: pageToken }
+        : { textQuery: `specialty coffee shop in ${query}`, maxResultCount: Math.min(20, limit) };
 
-    if (!resp.ok){
-      const msg = (data.error && data.error.message) || `Ошибка запроса (${resp.status})`;
-      throw new Error(msg);
-    }
+      const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': fieldMask
+        },
+        body: JSON.stringify(body)
+      });
 
-    const places = data.places || [];
+      const data = await resp.json();
+
+      if (!resp.ok){
+        const msg = (data.error && data.error.message) || `Ошибка запроса (${resp.status})`;
+        throw new Error(msg);
+      }
+
+      places = places.concat(data.places || []);
+      pageToken = data.nextPageToken || null;
+      page++;
+
+      setStatus(`Ищу кофейни... найдено ${places.length}`);
+
+      // Google требует небольшую паузу перед использованием nextPageToken
+      if (pageToken && places.length < limit) {
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    } while (pageToken && places.length < limit && page < 5);
+
+    places = places.slice(0, limit);
+
     if (places.length === 0){
       resultsEl.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте другой город или запрос.</div>';
       setStatus('');
