@@ -417,22 +417,33 @@ function queuedFetch(url){
   return result;
 }
 
-async function findInstagram(websiteUrl){
-  if (!websiteUrl) return null;
-
-  // Сайт сам уже є посиланням на Instagram
-  const direct = extractIgHandle(websiteUrl);
-  if (direct) return direct;
-
-  // Якщо сайт веде на Facebook — Instagram там навряд чи знайдемо
-  if (/facebook\.com/i.test(websiteUrl)) return null;
-
-  const text = await queuedFetch('https://r.jina.ai/' + websiteUrl);
-  if (!text) return null;
-  return extractIgHandle(text);
+function extractEmail(text){
+  const m = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  if (!m) return null;
+  // Фільтруємо технічні адреси та плейсхолдери
+  const skip = /noreply|no-reply|example|yourname|info@sentry|@2x|\.png|\.jpg|\.svg/i;
+  return skip.test(m[0]) ? null : m[0];
 }
 
-function card(place){
+async function fetchSiteData(websiteUrl){
+  // Повертає { ig, email }
+  if (!websiteUrl) return { ig: null, email: null };
+
+  const directIg = extractIgHandle(websiteUrl);
+  if (directIg) return { ig: directIg, email: null };
+
+  if (/facebook\.com/i.test(websiteUrl)) return { ig: null, email: null };
+
+  const text = await queuedFetch('https://r.jina.ai/' + websiteUrl);
+  if (!text) return { ig: null, email: null };
+
+  return {
+    ig: extractIgHandle(text),
+    email: extractEmail(text)
+  };
+}
+
+function card(place, onDone){
   const name = place.displayName ? place.displayName.text : '(без назви)';
   const address = place.formattedAddress || '—';
   const rating = place.rating ? `⭐ ${place.rating}` : '';
@@ -466,7 +477,9 @@ function card(place){
   if (phone) html += `<a href="tel:${phone}">${phone}</a>`;
   if (phone) html += `<a href="https://wa.me/${phone.replace(/[^\d+]/g,'').replace(/^\+/,'')}" target="_blank">whatsapp →</a>`;
   const igId = 'ig-' + Math.random().toString(36).slice(2, 9);
+  const emailId = 'em-' + Math.random().toString(36).slice(2, 9);
   html += `<span id="${igId}">⏳ шукаю instagram...</span>`;
+  html += `<span id="${emailId}">⏳ шукаю email...</span>`;
   html += `</div>`;
 
   html += `<div class="lead-row">
@@ -492,15 +505,29 @@ function card(place){
     place.leadNotes = e.target.value;
   });
 
-  findInstagram(website).then(handle => {
-    place.instagramHandle = handle || null;
-    const el = div.querySelector('#' + igId);
-    if (!el) return;
-    if (handle){
-      el.outerHTML = `<a href="https://instagram.com/${handle}" target="_blank">@${handle} (instagram) →</a>`;
-    } else {
-      el.outerHTML = `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">не знайдено, шукати за хештегом →</a>`;
+  fetchSiteData(website).then(({ ig, email }) => {
+    place.instagramHandle = ig || null;
+    place.email = email || null;
+
+    const igEl = div.querySelector('#' + igId);
+    if (igEl){
+      if (ig){
+        igEl.outerHTML = `<a href="https://instagram.com/${ig}" target="_blank">@${ig} (instagram) →</a>`;
+      } else {
+        igEl.outerHTML = `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,''))}" target="_blank">не знайдено, шукати за хештегом →</a>`;
+      }
     }
+
+    const emEl = div.querySelector('#' + emailId);
+    if (emEl){
+      if (email){
+        emEl.outerHTML = `<a href="mailto:${email}">${email}</a>`;
+      } else {
+        emEl.outerHTML = '';
+      }
+    }
+
+    if (onDone) onDone();
   });
 
   return div;
@@ -531,6 +558,7 @@ async function search(){
     const fieldMask = [
       'places.displayName',
       'places.formattedAddress',
+      'places.addressComponents',
       'places.rating',
       'places.userRatingCount',
       'places.priceLevel',
@@ -601,14 +629,40 @@ async function search(){
     countN.textContent = `${places.length} місць`;
     countRow.style.display = 'flex';
     lastPlaces = places;
+    exportBtn.disabled = true;
+    exportBtn.textContent = '⏳ парсинг...';
 
-    places.forEach(p => resultsEl.appendChild(card(p)));
+    let pending = places.length;
+    function onFetchDone(){
+      pending--;
+      exportBtn.textContent = pending > 0 ? `⏳ залишилось ${pending}...` : 'Завантажити в Excel';
+      if (pending <= 0) exportBtn.disabled = false;
+    }
+
+    places.forEach(p => {
+      const cardEl = card(p, onFetchDone);
+      resultsEl.appendChild(cardEl);
+    });
     setStatus('Готово.');
   }catch(err){
     setStatus('Помилка: ' + err.message, true);
   }finally{
     searchBtn.disabled = false;
   }
+}
+
+function parseAddress(place){
+  const comps = place.addressComponents || [];
+  const get = (...types) => {
+    const c = comps.find(c => types.some(t => c.types && c.types.includes(t)));
+    return c ? c.longText || c.shortText || '' : '';
+  };
+  const streetNumber = get('street_number');
+  const route = get('route');
+  const street = [route, streetNumber].filter(Boolean).join(', ');
+  const city = get('locality', 'postal_town', 'sublocality_level_1');
+  const country = get('country');
+  return { street, city, country };
 }
 
 function exportToExcel(){
@@ -618,18 +672,21 @@ function exportToExcel(){
 
   const rows = lastPlaces.map(p => {
     const wd = p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions;
+    const { street, city, country } = parseAddress(p);
     return {
       'Назва': p.displayName ? p.displayName.text : '',
-      'Адреса': p.formattedAddress || '',
+      'Країна': country,
+      'Місто': city,
+      'Вулиця': street,
       'Рейтинг': p.rating || '',
       'К-сть відгуків': p.userRatingCount || '',
       'Ціна': priceLabel(p.priceLevel) || '',
-      'Відкрито зараз': p.regularOpeningHours ? (p.regularOpeningHours.openNow ? 'так' : 'ні') : '',
-      'Години роботи': wd ? wd.join('; ') : '',
       'Телефон': p.nationalPhoneNumber || '',
-      'Сайт': p.websiteUri || '',
+      'Email': p.email || '',
       'Instagram': p.instagramHandle ? `https://instagram.com/${p.instagramHandle}` : '',
+      'Сайт': p.websiteUri || '',
       'Google Maps': p.googleMapsUri || '',
+      'Години роботи': wd ? wd.join('; ') : '',
       'Опис': p.editorialSummary ? p.editorialSummary.text : '',
       'Статус ліда': statusLabel[p.leadStatus] || 'новий лід',
       'Нотатка': p.leadNotes || ''
@@ -638,7 +695,7 @@ function exportToExcel(){
 
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [
-    {wch:24},{wch:36},{wch:8},{wch:14},{wch:8},{wch:14},{wch:40},{wch:16},{wch:30},{wch:26},{wch:30},{wch:40},{wch:16},{wch:36}
+    {wch:24},{wch:14},{wch:18},{wch:28},{wch:8},{wch:14},{wch:8},{wch:16},{wch:26},{wch:28},{wch:30},{wch:30},{wch:40},{wch:40},{wch:16},{wch:36}
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ліди');
