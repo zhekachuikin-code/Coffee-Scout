@@ -661,19 +661,33 @@ function parseAddress(place){
   const route = getType('route');
   const street = [route, streetNumber].filter(Boolean).join(', ');
 
-  // Деякі міста (напр. Прага) повертають райони (Staré Město) з типом locality+sublocality.
-  // Шукаємо locality БЕЗ sublocality-тегу — це справжнє місто.
-  const trueLocality = comps.find(c =>
-    c.types && c.types.includes('locality') && !c.types.includes('sublocality')
-  );
-  const city = (trueLocality ? trueLocality.longText || trueLocality.shortText : '')
-    || getType('postal_town')
-    || getType('administrative_area_level_2')
-    || getType('locality');
+  // Збираємо всі можливі значення
+  const locality        = getType('locality');           // Praha 1, Praha 2, Staré Město, Kyiv...
+  const postalTown      = getType('postal_town');
+  const adminLevel2     = getType('administrative_area_level_2'); // Praha (для ЧР)
+  const adminLevel1     = getType('administrative_area_level_1'); // Hlavní město Praha
+  const sublocality     = getType('sublocality_level_1');
 
-  // Район: sublocality_level_1 якщо відрізняється від міста
-  const subloc = getType('sublocality_level_1') || getType('neighborhood');
-  const district = subloc !== city ? subloc : '';
+  // Якщо locality виглядає як "Praha N" (місто+номер) — це район, місто = "Praha"
+  const localityIsPragueDistrict = /^Praha\s+\d+$/i.test(locality);
+  // Якщо adminLevel1 містить "Hlavní město" — витягуємо просто назву міста після цього префіксу
+  const cleanAdmin1 = adminLevel1.replace(/^Hlavní\s+město\s+/i, '').trim();
+
+  let city, district;
+
+  if (localityIsPragueDistrict) {
+    // Прага: місто = Praha, район = назва кварталу (Staré Město, Vinohrady...)
+    city     = adminLevel2 || cleanAdmin1 || 'Praha';
+    district = sublocality || locality; // sublocality = Staré Město, якщо порожньо — Praha 1
+  } else {
+    // Загальний випадок
+    const trueLocality = comps.find(c =>
+      c.types && c.types.includes('locality') && !c.types.includes('sublocality')
+    );
+    city     = (trueLocality ? trueLocality.longText || trueLocality.shortText : '')
+               || postalTown || adminLevel2 || cleanAdmin1 || locality;
+    district = sublocality !== city ? sublocality : '';
+  }
 
   const country = getType('country');
   return { street, city, district, country };
