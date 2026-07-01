@@ -653,16 +653,30 @@ async function search(){
 
 function parseAddress(place){
   const comps = place.addressComponents || [];
-  const get = (...types) => {
-    const c = comps.find(c => types.some(t => c.types && c.types.includes(t)));
+  const getType = (type) => {
+    const c = comps.find(c => c.types && c.types.includes(type));
     return c ? c.longText || c.shortText || '' : '';
   };
-  const streetNumber = get('street_number');
-  const route = get('route');
+  const streetNumber = getType('street_number');
+  const route = getType('route');
   const street = [route, streetNumber].filter(Boolean).join(', ');
-  const city = get('locality', 'postal_town', 'sublocality_level_1');
-  const country = get('country');
-  return { street, city, country };
+
+  // Деякі міста (напр. Прага) повертають райони (Staré Město) з типом locality+sublocality.
+  // Шукаємо locality БЕЗ sublocality-тегу — це справжнє місто.
+  const trueLocality = comps.find(c =>
+    c.types && c.types.includes('locality') && !c.types.includes('sublocality')
+  );
+  const city = (trueLocality ? trueLocality.longText || trueLocality.shortText : '')
+    || getType('postal_town')
+    || getType('administrative_area_level_2')
+    || getType('locality');
+
+  // Район: sublocality_level_1 якщо відрізняється від міста
+  const subloc = getType('sublocality_level_1') || getType('neighborhood');
+  const district = subloc !== city ? subloc : '';
+
+  const country = getType('country');
+  return { street, city, district, country };
 }
 
 function exportToExcel(){
@@ -672,11 +686,12 @@ function exportToExcel(){
 
   const rows = lastPlaces.map(p => {
     const wd = p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions;
-    const { street, city, country } = parseAddress(p);
+    const { street, city, district, country } = parseAddress(p);
     return {
       'Назва': p.displayName ? p.displayName.text : '',
       'Країна': country,
       'Місто': city,
+      'Район': district,
       'Вулиця': street,
       'Рейтинг': p.rating || '',
       'К-сть відгуків': p.userRatingCount || '',
@@ -695,7 +710,7 @@ function exportToExcel(){
 
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [
-    {wch:24},{wch:14},{wch:18},{wch:28},{wch:8},{wch:14},{wch:8},{wch:16},{wch:26},{wch:28},{wch:30},{wch:30},{wch:40},{wch:40},{wch:16},{wch:36}
+    {wch:24},{wch:14},{wch:18},{wch:18},{wch:28},{wch:8},{wch:14},{wch:8},{wch:16},{wch:26},{wch:28},{wch:30},{wch:30},{wch:40},{wch:40},{wch:16},{wch:36}
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ліди');
